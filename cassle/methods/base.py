@@ -18,7 +18,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR, MultiStepLR
 
 
 def static_lr(
-    get_lr: Callable, param_group_indexes: Sequence[int], lrs_to_replace: Sequence[float]
+        get_lr: Callable, param_group_indexes: Sequence[int], lrs_to_replace: Sequence[float]
 ):
     lrs = get_lr()
     for idx, lr in zip(param_group_indexes, lrs_to_replace):
@@ -28,38 +28,39 @@ def static_lr(
 
 class BaseModel(pl.LightningModule):
     def __init__(
-        self,
-        encoder: str,
-        num_classes: int,
-        cifar: bool,
-        zero_init_residual: bool,
-        max_epochs: int,
-        batch_size: int,
-        online_eval_batch_size: int,
-        optimizer: str,
-        lars: bool,
-        lr: float,
-        weight_decay: float,
-        classifier_lr: float,
-        exclude_bias_n_norm: bool,
-        accumulate_grad_batches: int,
-        extra_optimizer_args: Dict,
-        scheduler: str,
-        min_lr: float,
-        warmup_start_lr: float,
-        warmup_epochs: float,
-        multicrop: bool,
-        num_crops: int,
-        num_small_crops: int,
-        tasks: list,
-        num_tasks: int,
-        split_strategy,
-        eta_lars: float = 1e-3,
-        grad_clip_lars: bool = False,
-        lr_decay_steps: Sequence = None,
-        disable_knn_eval: bool = True,
-        knn_k: int = 20,
-        **kwargs,
+            self,
+            encoder: str,
+            num_classes: int,
+            cifar: bool,
+            zero_init_residual: bool,
+            max_epochs: int,
+            batch_size: int,
+            online_eval_batch_size: int,
+            semi_batch_size: int,
+            optimizer: str,
+            lars: bool,
+            lr: float,
+            weight_decay: float,
+            classifier_lr: float,
+            exclude_bias_n_norm: bool,
+            accumulate_grad_batches: int,
+            extra_optimizer_args: Dict,
+            scheduler: str,
+            min_lr: float,
+            warmup_start_lr: float,
+            warmup_epochs: float,
+            multicrop: bool,
+            num_crops: int,
+            num_small_crops: int,
+            tasks: list,
+            num_tasks: int,
+            split_strategy,
+            eta_lars: float = 1e-3,
+            grad_clip_lars: bool = False,
+            lr_decay_steps: Sequence = None,
+            disable_knn_eval: bool = True,
+            knn_k: int = 20,
+            **kwargs,
     ):
         """Base model that implements all basic operations for all self-supervised methods.
         It adds shared arguments, extract basic learnable parameters, creates optimizers
@@ -146,6 +147,7 @@ class BaseModel(pl.LightningModule):
 
         # check if should perform online eval
         self.online_eval = online_eval_batch_size is not None
+        self.semi = semi_batch_size is not None
 
         # all the other parameters
         self.extra_args = kwargs
@@ -175,6 +177,12 @@ class BaseModel(pl.LightningModule):
 
         if not self.disable_knn_eval:
             self.knn = WeightedKNNClassifier(k=knn_k, distance_fx="euclidean")
+
+        if self.semi:
+            self.prototypes = nn.ParameterList(
+                [nn.Parameter(torch.randn(1, self.features_dim)) for i in range(num_classes)])
+            self.semi_classifier = nn.Linear(self.features_dim, num_classes)
+            self.radius = 0.1
 
     @staticmethod
     def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
@@ -410,7 +418,7 @@ class BaseModel(pl.LightningModule):
         outs_task = {k: [out[k] for out in outs_task] for k in outs_task[0].keys()}
 
         if self.multicrop:
-            outs_task["feats"].extend([self.encoder(x) for x in X_task[self.num_crops :]])
+            outs_task["feats"].extend([self.encoder(x) for x in X_task[self.num_crops:]])
 
         if self.online_eval:
             assert "online_eval" in batch.keys()
@@ -522,11 +530,11 @@ class BaseModel(pl.LightningModule):
 
 class BaseMomentumModel(BaseModel):
     def __init__(
-        self,
-        base_tau_momentum: float,
-        final_tau_momentum: float,
-        momentum_classifier: bool,
-        **kwargs,
+            self,
+            base_tau_momentum: float,
+            final_tau_momentum: float,
+            momentum_classifier: bool,
+            **kwargs,
     ):
         """Base momentum model that implements all basic operations for all self-supervised methods
         that use a momentum encoder. It adds shared momentum arguments, adds basic learnable
@@ -637,7 +645,7 @@ class BaseMomentumModel(BaseModel):
         return {"feats": feats}
 
     def _online_eval_shared_step_momentum(
-        self, X: torch.Tensor, targets: torch.Tensor
+            self, X: torch.Tensor, targets: torch.Tensor
     ) -> Dict[str, Any]:
         """Forwards a batch of images X in the momentum encoder and optionally computes the
         classification loss, the logits, the features, acc@1 and acc@5 for of momentum classifier.
@@ -692,6 +700,25 @@ class BaseMomentumModel(BaseModel):
         outs_task = [self.base_forward_momentum(x) for x in X_task]
         outs_task = {"momentum_" + k: [out[k] for out in outs_task] for k in outs_task[0].keys()}
 
+        if self.semi:
+            import random
+            old_class = [0, 1, 2, 3]
+            radius = 0.2
+            prototype = torch.tensor([[1, 2], [3, 4], [5, 6], [7, 8]])
+            batch_size = 16
+
+            x_new, y_new = batch["semi_data"]
+            y_old = torch.tensor(random.choices(old_class, k=batch_size)).to(sellf.device)
+            z_old = prototype[y_old] + torch.randn(batch_size, 2).to(self.device) * radius
+
+            z_new = self.encoder(x_new)
+            y_all = torch.cat([y_new, y_old], dim=0)
+            z_all = torch.cat([z_new, z_old], dim=0)
+
+            logits = self.semi_classifier(z_all)
+            targets = y_all
+            loss_protoAug = F.cross_entropy(logits, targets)
+
         if self.online_eval:
             *_, X_online_eval, targets_online_eval = batch["online_eval"]
 
@@ -702,7 +729,6 @@ class BaseMomentumModel(BaseModel):
             outs_online_eval = {"online_eval_momentum_" + k: v for k, v in outs_online_eval.items()}
 
             if self.momentum_classifier is not None:
-
                 metrics = {
                     "train_online_eval_momentum_class_loss": outs_online_eval[
                         "online_eval_momentum_loss"
@@ -749,7 +775,7 @@ class BaseMomentumModel(BaseModel):
         self.last_step = self.trainer.global_step
 
     def validation_step(
-        self, batch: List[torch.Tensor], batch_idx: int
+            self, batch: List[torch.Tensor], batch_idx: int
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Validation step for pytorch lightning. It performs all the shared operations for the
         momentum encoder and classifier, such as forwarding a batch of images in the momentum
