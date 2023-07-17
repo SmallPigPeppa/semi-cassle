@@ -54,7 +54,7 @@ class BaseModel(pl.LightningModule):
             num_small_crops: int,
             tasks: list,
             num_tasks: int,
-            current_task_idx: int,
+            task_idx: int,
             split_strategy,
             eta_lars: float = 1e-3,
             grad_clip_lars: bool = False,
@@ -130,7 +130,7 @@ class BaseModel(pl.LightningModule):
         self.tasks = tasks
         self.num_tasks = num_tasks
         self.split_strategy = split_strategy
-        self.current_task_idx = current_task_idx
+        self.current_task_idx = task_idx
 
         self.domains = [
             "real",
