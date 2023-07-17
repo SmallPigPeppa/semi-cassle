@@ -191,7 +191,7 @@ class BaseModel(pl.LightningModule):
                 for task in tasks[:self.current_task_idx]:
                     self.old_classes.extend(task.tolist())
                 self.new_classes = tasks[self.current_task_idx]
-                self.radius = torch.nn.Parameter(torch.Tensor(1.0), requires_grad=False)
+                self.radius = torch.nn.Parameter(torch.tensor(1.0), requires_grad=False)
 
     @staticmethod
     def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
