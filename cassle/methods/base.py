@@ -412,6 +412,7 @@ class BaseModel(pl.LightningModule):
 
     def on_train_epoch_end(self):
         if self.trainer.current_epoch==self.max_epochs-1:
+            print("################# save prototype ###################")
             self.save_prototypes()
 
     def save_prototypes(self):
