@@ -425,7 +425,8 @@ class BaseModel(pl.LightningModule):
             inputs = X_task[0].to(self.device)
             for class_id in self.new_classes:
                 indices = (targets == class_id)
-                features = self.forward(inputs[indices])
+                with torch.no_grad():
+                    features = self.encoder(inputs[indices])
                 # If class_id is encountered for the first time, initialize mean and features list
                 if class_id not in class_means:
                     class_means[class_id] = features.mean(dim=0, keepdim=True)
