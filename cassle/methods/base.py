@@ -408,8 +408,13 @@ class BaseModel(pl.LightningModule):
 
     def on_train_start(self):
         print('self.radius:',self.radius)
+        print('self.trainer.max_epochs:',self.trainer.max_epochs)
 
-    def on_train_end(self):
+    def on_train_epoch_end(self) -> None:
+        if self.trainer.current_epoch==self.max_epochs-1:
+            self.save_prototypes()
+
+    def save_prototypes(self):
         # Calculate the mean and variance of each class in self.new_classes
         class_means = {}
         class_features = {}
@@ -449,7 +454,7 @@ class BaseModel(pl.LightningModule):
             # Store average radius
             # self.radius = avg_radius
             self.radius = torch.nn.Parameter(avg_radius, requires_grad=False)
-        self.radius = torch.nn.Parameter(torch.tensor(2.0).to(self.device), requires_grad=False)
+        # self.radius = torch.nn.Parameter(torch.tensor(2.0).to(self.device), requires_grad=False)
 
     def training_step(self, batch: List[Any], batch_idx: int) -> Dict[str, Any]:
         """Training step for pytorch lightning. It does all the shared operations, such as
