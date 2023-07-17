@@ -498,7 +498,7 @@ class BaseModel(pl.LightningModule):
                 y_old_list = y_old.tolist()
                 # Index prototype with old_y_list
                 prototype_old = torch.cat([prototypes[i] for i in y_old_list])
-                z_old = prototype_old + torch.randn(batchsize_old, 2).to(self.device) * radius
+                z_old = prototype_old + torch.randn(batchsize_old, self.features_dim).to(self.device) * radius
 
                 y_all = torch.cat([y_new, y_old], dim=0)
                 z_all = torch.cat([z_new, z_old], dim=0)
