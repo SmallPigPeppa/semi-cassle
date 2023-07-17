@@ -410,7 +410,7 @@ class BaseModel(pl.LightningModule):
         print('self.radius:',self.radius)
         print('self.trainer.max_epochs:',self.trainer.max_epochs)
 
-    def on_train_epoch_end(self) -> None:
+    def on_train_epoch_end(self):
         if self.trainer.current_epoch==self.max_epochs-1:
             self.save_prototypes()
 
