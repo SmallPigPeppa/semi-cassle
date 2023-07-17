@@ -35,4 +35,3 @@ python3 main_continual.py \
     --output_dim 256 \
     --distiller contrastive \
     --semi
-#    --pretrained_model $PRETRAINED_PATH
