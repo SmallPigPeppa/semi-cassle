@@ -58,6 +58,7 @@ if __name__ == "__main__":
 
     # check if this experiment is being resumed
     # look for the file last_checkpoint.txt
+    print(args.keys())
     last_checkpoint_file = os.path.join(args["--checkpoint_dir"], "last_checkpoint.txt")
     if os.path.exists(last_checkpoint_file):
         with open(last_checkpoint_file) as f:
