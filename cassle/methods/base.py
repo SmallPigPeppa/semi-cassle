@@ -185,7 +185,7 @@ class BaseModel(pl.LightningModule):
             self.prototypes = nn.ParameterList(
                 [nn.Parameter(torch.randn(1, self.features_dim)) for i in range(num_classes)])
             self.semi_classifier = nn.Linear(self.features_dim, num_classes)
-            self.radius = 0.1
+            # self.radius = torch.nn.Parameter(torch.tensor(0.1).to(self.device), requires_grad=False)
             if self.split_strategy == "class":
                 self.old_classes = []
                 for task in tasks[:self.current_task_idx]:
@@ -446,7 +446,8 @@ class BaseModel(pl.LightningModule):
             avg_radius = torch.sqrt(torch.mean(torch.stack(radii)))
 
             # Store average radius
-            self.radius = avg_radius
+            # self.radius = avg_radius
+            self.radius = torch.nn.Parameter(avg_radius, requires_grad=False)
 
     def training_step(self, batch: List[Any], batch_idx: int) -> Dict[str, Any]:
         """Training step for pytorch lightning. It does all the shared operations, such as
