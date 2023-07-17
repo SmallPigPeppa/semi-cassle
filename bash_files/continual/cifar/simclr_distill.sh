@@ -3,10 +3,9 @@ python3 main_continual.py \
     --encoder resnet18 \
     --data_dir $DATA_DIR \
     --split_strategy class \
-    --task_idx 1 \
+    --task_idx 0 \
     --max_epochs 500 \
     --num_tasks 5 \
-    --max_epochs 500 \
     --gpus 0 \
     --precision 16 \
     --optimizer sgd \
@@ -26,13 +25,13 @@ python3 main_continual.py \
     --hue 0.2 \
     --gaussian_prob 0.0 0.0 \
     --name simclr-cifar100-contrastive \
-    --project ever-learn \
-    --entity unitn-mhug \
+    --project semi-cassle \
+    --entity pigpeppa \
     --wandb \
     --save_checkpoint \
     --method simclr \
     --temperature 0.2 \
     --proj_hidden_dim 2048 \
     --output_dim 256 \
-    --distiller contrastive \
-    --pretrained_model $PRETRAINED_PATH
+    --distiller contrastive
+
