@@ -3,7 +3,7 @@ from functools import partial
 from typing import Any, Callable, Dict, List, Sequence, Tuple
 import functools
 import operator
-
+import random
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -54,6 +54,7 @@ class BaseModel(pl.LightningModule):
             num_small_crops: int,
             tasks: list,
             num_tasks: int,
+            current_task_idx: int,
             split_strategy,
             eta_lars: float = 1e-3,
             grad_clip_lars: bool = False,
@@ -129,6 +130,7 @@ class BaseModel(pl.LightningModule):
         self.tasks = tasks
         self.num_tasks = num_tasks
         self.split_strategy = split_strategy
+        self.current_task_idx = current_task_idx
 
         self.domains = [
             "real",
@@ -183,6 +185,11 @@ class BaseModel(pl.LightningModule):
                 [nn.Parameter(torch.randn(1, self.features_dim)) for i in range(num_classes)])
             self.semi_classifier = nn.Linear(self.features_dim, num_classes)
             self.radius = 0.1
+            if self.split_strategy == "class":
+                self.old_classes = []
+                for task in tasks[:self.current_task_idx]:
+                    self.old_classes.extend(task.tolist())
+                self.new_classes = tasks[self.current_task_idx]
 
     @staticmethod
     def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
@@ -394,6 +401,49 @@ class BaseModel(pl.LightningModule):
             "acc5": acc5.detach(),
         }
 
+    # def on_train_start(self):
+    #     pass
+
+    def on_train_end(self):
+        # Calculate the mean and variance of each class in self.new_classes
+        class_means = {}
+        class_features = {}
+        self.eval()
+        for _, X_task, Y_task in self.trainloader:
+            targets = Y_task
+            inputs = X_task[0]
+            for class_id in self.new_classes:
+                indices = (targets == class_id)
+                with torch.no_grad():
+                    features = self.encoder(inputs[indices])
+                # If class_id is encountered for the first time, initialize mean and features list
+                if class_id not in class_means:
+                    class_means[class_id] = features.mean(dim=0)
+                    class_features[class_id] = [features]
+                # If class_id has been encountered before, update mean and append features
+                else:
+                    class_means[class_id] = (class_means[class_id] * len(class_features[class_id]) + features.mean(
+                        dim=0)) / (len(class_features[class_id]) + 1)
+                    class_features[class_id].append(features)
+
+        # Update prototypes with calculated means
+        for class_id in class_means:
+            self.prototypes[class_id] = nn.Parameter(class_means[class_id])
+
+        if self.current_task_idx==0:
+            # Compute average radius
+            radii = []
+            for class_id in class_features:
+                features = torch.cat(class_features[class_id], dim=0)
+                features = features - class_means[class_id]
+                cov = torch.matmul(features.t(), features) / features.shape[0]
+                radius = torch.trace(cov) / features.shape[1]
+                radii.append(radius)
+            avg_radius = torch.sqrt(torch.mean(torch.stack(radii)))
+
+            # Store average radius
+            self.radius = avg_radius
+
     def training_step(self, batch: List[Any], batch_idx: int) -> Dict[str, Any]:
         """Training step for pytorch lightning. It does all the shared operations, such as
         forwarding the crops, computing logits and computing statistics.
@@ -407,7 +457,8 @@ class BaseModel(pl.LightningModule):
             Dict[str, Any]: dict with the classification loss, features and logits
         """
 
-        _, X_task, _ = batch[f"task{self.current_task_idx}"]
+        # _, X_task, _ = batch[f"task{self.current_task_idx}"]
+        _, X_task, Y_task = batch[f"task{self.current_task_idx}"]
         X_task = [X_task] if isinstance(X_task, torch.Tensor) else X_task
 
         # check that we received the desired number of crops
@@ -417,8 +468,47 @@ class BaseModel(pl.LightningModule):
         outs_task = [self.base_forward(x) for x in X_task[: self.num_crops]]
         outs_task = {k: [out[k] for out in outs_task] for k in outs_task[0].keys()}
 
+        # Initialize loss in outs_task
+        outs_task["loss"] = 0
+
         if self.multicrop:
             outs_task["feats"].extend([self.encoder(x) for x in X_task[self.num_crops:]])
+
+        if self.semi:
+            if self.current_task_idx > 0:
+                old_classes = self.old_classes
+                radius = self.radius
+                prototypes = self.prototypes
+                batch_size = 16
+                batchsize_new = batch_size // 2
+                batchsize_old = batch_size // 2
+
+                # x_new, y_new = batch["semi_data"]
+                x_new = X_task[0][:batchsize_new]
+                y_new = Y_task[:batchsize_new]
+                z_new = self.encoder(x_new)
+
+                y_old = torch.tensor(random.choices(old_classes, k=batch_size))[:batchsize_old].to(self.device)
+                # Convert old_y to Python list
+                y_old_list = y_old.tolist()
+                # Index prototype with old_y_list
+                prototype_old = torch.cat([prototypes[i] for i in y_old_list])
+                z_old = prototype_old + torch.randn(batchsize_old, 2).to(self.device) * radius
+
+                y_all = torch.cat([y_new, y_old], dim=0)
+                z_all = torch.cat([z_new, z_old], dim=0)
+            else:
+                x_new = X_task[0]
+                y_all = Y_task
+                z_all = self.encoder(x_new)
+
+            logits = self.semi_classifier(z_all)
+            targets = y_all
+            semi_loss = F.cross_entropy(logits, targets)
+            outs_semi = {'semi_loss': semi_loss}
+            outs_task.update(outs_semi)
+            # Add the protoAug_loss to loss in outs_task
+            outs_task["loss"] += outs_semi['semi_loss']
 
         if self.online_eval:
             assert "online_eval" in batch.keys()
@@ -442,10 +532,11 @@ class BaseModel(pl.LightningModule):
                     train_targets=targets_online_eval,
                 )
 
-            loss = outs_online_eval.pop("online_eval_loss")
+            # Add the online_eval_loss to loss in outs_task
+            loss = outs_task["loss"] + outs_online_eval.pop("online_eval_loss")
             return {**outs_task, **outs_online_eval, **{"loss": loss}}
         else:
-            return {**outs_task, "loss": 0}
+            return outs_task
 
     def validation_step(self, batch: List[torch.Tensor], batch_idx: int) -> Dict[str, Any]:
         """Validation step for pytorch lightning. It does all the shared operations, such as
@@ -700,24 +791,24 @@ class BaseMomentumModel(BaseModel):
         outs_task = [self.base_forward_momentum(x) for x in X_task]
         outs_task = {"momentum_" + k: [out[k] for out in outs_task] for k in outs_task[0].keys()}
 
-        if self.semi:
-            import random
-            old_class = [0, 1, 2, 3]
-            radius = 0.2
-            prototype = torch.tensor([[1, 2], [3, 4], [5, 6], [7, 8]])
-            batch_size = 16
-
-            x_new, y_new = batch["semi_data"]
-            y_old = torch.tensor(random.choices(old_class, k=batch_size)).to(sellf.device)
-            z_old = prototype[y_old] + torch.randn(batch_size, 2).to(self.device) * radius
-
-            z_new = self.encoder(x_new)
-            y_all = torch.cat([y_new, y_old], dim=0)
-            z_all = torch.cat([z_new, z_old], dim=0)
-
-            logits = self.semi_classifier(z_all)
-            targets = y_all
-            loss_protoAug = F.cross_entropy(logits, targets)
+        # if self.semi:
+        #     import random
+        #     old_class = [0, 1, 2, 3]
+        #     radius = 0.2
+        #     prototype = torch.tensor([[1, 2], [3, 4], [5, 6], [7, 8]])
+        #     batch_size = 16
+        #
+        #     x_new, y_new = batch["semi_data"]
+        #     y_old = torch.tensor(random.choices(old_class, k=batch_size)).to(sellf.device)
+        #     z_old = prototype[y_old] + torch.randn(batch_size, 2).to(self.device) * radius
+        #
+        #     z_new = self.encoder(x_new)
+        #     y_all = torch.cat([y_new, y_old], dim=0)
+        #     z_all = torch.cat([z_new, z_old], dim=0)
+        #
+        #     logits = self.semi_classifier(z_all)
+        #     targets = y_all
+        #     loss_protoAug = F.cross_entropy(logits, targets)
 
         if self.online_eval:
             *_, X_online_eval, targets_online_eval = batch["online_eval"]
