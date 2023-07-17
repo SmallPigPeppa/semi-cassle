@@ -236,7 +236,7 @@ class BaseModel(pl.LightningModule):
         parser.add_argument("--exclude_bias_n_norm", action="store_true")
 
         # semi
-        parser.add_argument("--semi", action="store_true")
+        parser.add_argument("--semi_aug", action="store_true")
 
         # scheduler
         SUPPORTED_SCHEDULERS = [

@@ -34,4 +34,4 @@ python3 main_continual.py \
     --proj_hidden_dim 2048 \
     --output_dim 256 \
     --distiller contrastive \
-    --semi
+    --semi_aug

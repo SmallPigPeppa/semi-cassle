@@ -47,7 +47,7 @@ def main():
 
     # set online eval batch size and num workers
     args.online_eval_batch_size = int(args.batch_size) if args.dataset == "cifar100" else None
-    args.semi_batch_size = int(args.batch_size) if args.semi else None
+    args.semi_batch_size = int(args.batch_size) if args.semi_aug else None
 
     # split classes into tasks
     tasks = None
