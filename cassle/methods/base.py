@@ -181,6 +181,7 @@ class BaseModel(pl.LightningModule):
             self.knn = WeightedKNNClassifier(k=knn_k, distance_fx="euclidean")
 
         if self.semi:
+            self.semi_batch_size = semi_batch_size
             self.prototypes = nn.ParameterList(
                 [nn.Parameter(torch.randn(1, self.features_dim)) for i in range(num_classes)])
             self.semi_classifier = nn.Linear(self.features_dim, num_classes)
@@ -233,7 +234,6 @@ class BaseModel(pl.LightningModule):
         parser.add_argument("--grad_clip_lars", action="store_true")
         parser.add_argument("--eta_lars", default=1e-3, type=float)
         parser.add_argument("--exclude_bias_n_norm", action="store_true")
-
 
         # semi
         parser.add_argument("--semi", action="store_true")
@@ -434,7 +434,7 @@ class BaseModel(pl.LightningModule):
         for class_id in class_means:
             self.prototypes[class_id] = nn.Parameter(class_means[class_id])
 
-        if self.current_task_idx==0:
+        if self.current_task_idx == 0:
             # Compute average radius
             radii = []
             for class_id in class_features:
@@ -483,7 +483,7 @@ class BaseModel(pl.LightningModule):
                 old_classes = self.old_classes
                 radius = self.radius
                 prototypes = self.prototypes
-                batch_size = 16
+                batch_size = self.semi_batch_size
                 batchsize_new = batch_size // 2
                 batchsize_old = batch_size // 2
 
