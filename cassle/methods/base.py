@@ -419,7 +419,10 @@ class BaseModel(pl.LightningModule):
         # Calculate the mean and variance of each class in self.new_classes
         class_means = {}
         class_features = {}
-        for inputs, targets in self.trainloader:
+        self.eval()
+        for _, X_task, Y_task in self.train_loaders[f"task{self.current_task_idx}"]:
+            targets = Y_task.to(self.device)
+            inputs = X_task[0].to(self.device)
             for class_id in self.new_classes:
                 indices = (targets == class_id)
                 features = self.forward(inputs[indices])
@@ -433,7 +436,7 @@ class BaseModel(pl.LightningModule):
                         dim=0, keepdim=True)) / (len(class_features[class_id]) + 1)
                     class_features[class_id].append(features)
 
-        # Update prototypes with calculated means
+            # Update prototypes with calculated means
         for class_id in class_means:
             self.prototypes[class_id] = nn.Parameter(class_means[class_id])
 
@@ -451,8 +454,7 @@ class BaseModel(pl.LightningModule):
             # Store average radius
             # self.radius = avg_radius
             self.radius = nn.Parameter(avg_radius, requires_grad=False)
-
-        # self.radius = nn.Parameter(torch.tensor(2.0).to(self.device), requires_grad=False)
+        self.radius = nn.Parameter(torch.tensor(2.0).to(self.device), requires_grad=False)
 
     def training_step(self, batch: List[Any], batch_idx: int) -> Dict[str, Any]:
         """Training step for pytorch lightning. It does all the shared operations, such as
