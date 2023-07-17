@@ -131,7 +131,7 @@ class Checkpointer(Callback):
         self.initial_setup(trainer)
         self.save_args(trainer)
 
-    def on_train_epoch_end(self, trainer: pl.Trainer, _):
+    def on_train_epoch_end(self, trainer: pl.Trainer, pl_module):
         """Tries to save current checkpoint at the end of each validation epoch.
 
         Args:
@@ -139,5 +139,7 @@ class Checkpointer(Callback):
         """
 
         epoch = trainer.current_epoch  # type: ignore
+        if pl_module.semi and epoch == trainer.max_epochs-1:
+            pl_module.save_prototypes()
         if epoch % self.frequency == 0:
             self.save(trainer)
