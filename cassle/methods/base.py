@@ -413,7 +413,8 @@ class BaseModel(pl.LightningModule):
         class_means = {}
         class_features = {}
         self.eval()
-        for _, X_task, Y_task in self.trainloader:
+        for batch in self.train_loaders:
+            _, X_task, Y_task = batch[f"task{self.current_task_idx}"]
             targets = Y_task
             inputs = X_task[0]
             for class_id in self.new_classes:
