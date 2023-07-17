@@ -234,6 +234,10 @@ class BaseModel(pl.LightningModule):
         parser.add_argument("--eta_lars", default=1e-3, type=float)
         parser.add_argument("--exclude_bias_n_norm", action="store_true")
 
+
+        # semi
+        parser.add_argument("--semi", action="store_true")
+
         # scheduler
         SUPPORTED_SCHEDULERS = [
             "reduce",
