@@ -191,6 +191,7 @@ class BaseModel(pl.LightningModule):
                 for task in tasks[:self.current_task_idx]:
                     self.old_classes.extend(task.tolist())
                 self.new_classes = tasks[self.current_task_idx]
+                self.radius = torch.nn.Parameter(torch.Tensor(1.0), requires_grad=False)
 
     @staticmethod
     def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
@@ -405,8 +406,8 @@ class BaseModel(pl.LightningModule):
             "acc5": acc5.detach(),
         }
 
-    # def on_train_start(self):
-    #     pass
+    def on_train_start(self):
+        print('self.radius:',self.radius)
 
     def on_train_end(self):
         # Calculate the mean and variance of each class in self.new_classes
