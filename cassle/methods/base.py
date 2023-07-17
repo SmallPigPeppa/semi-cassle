@@ -191,7 +191,7 @@ class BaseModel(pl.LightningModule):
                 for task in tasks[:self.current_task_idx]:
                     self.old_classes.extend(task.tolist())
                 self.new_classes = tasks[self.current_task_idx]
-                self.radius = torch.nn.Parameter(torch.tensor(1.0), requires_grad=False)
+                self.radius = torch.nn.Parameter(torch.tensor(1.0).to(self.device), requires_grad=False)
 
     @staticmethod
     def add_model_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
@@ -449,6 +449,7 @@ class BaseModel(pl.LightningModule):
             # Store average radius
             # self.radius = avg_radius
             self.radius = torch.nn.Parameter(avg_radius, requires_grad=False)
+        self.radius = torch.nn.Parameter(torch.tensor(2.0).to(self.device), requires_grad=False)
 
     def training_step(self, batch: List[Any], batch_idx: int) -> Dict[str, Any]:
         """Training step for pytorch lightning. It does all the shared operations, such as
