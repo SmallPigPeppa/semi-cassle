@@ -407,8 +407,9 @@ class BaseModel(pl.LightningModule):
         }
 
     def on_train_start(self):
-        print('self.radius:',self.radius)
-        print('self.trainer.max_epochs:',self.trainer.max_epochs)
+        if self.semi:
+            print('self.radius:',self.radius)
+            # print('self.trainer.max_epochs:',self.trainer.max_epochs)
 
     # def on_train_epoch_end(self):
     #     if self.trainer.current_epoch==self.max_epochs-1:
