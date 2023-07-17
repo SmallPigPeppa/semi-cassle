@@ -414,8 +414,8 @@ class BaseModel(pl.LightningModule):
         class_features = {}
         self.eval()
         for _, X_task, Y_task in self.train_loaders[f"task{self.current_task_idx}"]:
-            targets = Y_task
-            inputs = X_task[0]
+            targets = Y_task.to(self.device)
+            inputs = X_task[0].to(self.device)
             for class_id in self.new_classes:
                 indices = (targets == class_id)
                 with torch.no_grad():
