@@ -140,6 +140,7 @@ class Checkpointer(Callback):
 
         epoch = trainer.current_epoch  # type: ignore
         if pl_module.semi and epoch == trainer.max_epochs-1:
+            print("################# save prototype ###################")
             pl_module.save_prototypes()
         if epoch % self.frequency == 0:
             self.save(trainer)

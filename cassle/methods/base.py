@@ -410,31 +410,27 @@ class BaseModel(pl.LightningModule):
         print('self.radius:',self.radius)
         print('self.trainer.max_epochs:',self.trainer.max_epochs)
 
-    def on_train_epoch_end(self):
-        if self.trainer.current_epoch==self.max_epochs-1:
-            print("################# save prototype ###################")
-            self.save_prototypes()
+    # def on_train_epoch_end(self):
+    #     if self.trainer.current_epoch==self.max_epochs-1:
+    #         print("################# save prototype ###################")
+    #         self.save_prototypes()
 
     def save_prototypes(self):
         # Calculate the mean and variance of each class in self.new_classes
         class_means = {}
         class_features = {}
-        self.eval()
-        for _, X_task, Y_task in self.train_loaders[f"task{self.current_task_idx}"]:
-            targets = Y_task.to(self.device)
-            inputs = X_task[0].to(self.device)
+        for inputs, targets in self.trainloader:
             for class_id in self.new_classes:
                 indices = (targets == class_id)
-                with torch.no_grad():
-                    features = self.encoder(inputs[indices])
+                features = self.forward(inputs[indices])
                 # If class_id is encountered for the first time, initialize mean and features list
                 if class_id not in class_means:
-                    class_means[class_id] = features.mean(dim=0)
+                    class_means[class_id] = features.mean(dim=0, keepdim=True)
                     class_features[class_id] = [features]
                 # If class_id has been encountered before, update mean and append features
                 else:
                     class_means[class_id] = (class_means[class_id] * len(class_features[class_id]) + features.mean(
-                        dim=0)) / (len(class_features[class_id]) + 1)
+                        dim=0, keepdim=True)) / (len(class_features[class_id]) + 1)
                     class_features[class_id].append(features)
 
         # Update prototypes with calculated means
@@ -455,7 +451,8 @@ class BaseModel(pl.LightningModule):
             # Store average radius
             # self.radius = avg_radius
             self.radius = nn.Parameter(avg_radius, requires_grad=False)
-        self.radius = nn.Parameter(torch.tensor(2.0).to(self.device), requires_grad=False)
+
+        # self.radius = nn.Parameter(torch.tensor(2.0).to(self.device), requires_grad=False)
 
     def training_step(self, batch: List[Any], batch_idx: int) -> Dict[str, Any]:
         """Training step for pytorch lightning. It does all the shared operations, such as
