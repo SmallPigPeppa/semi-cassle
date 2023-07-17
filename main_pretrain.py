@@ -164,7 +164,7 @@ def main():
     elif args.pretrained_model:
         print(f"Loading previous task checkpoint {args.pretrained_model}...")
         state_dict = torch.load(args.pretrained_model, map_location="cpu")["state_dict"]
-        model.load_state_dict(state_dict, strict=True)
+        model.load_state_dict(state_dict, strict=False)
 
     callbacks = []
 
