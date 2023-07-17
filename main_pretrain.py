@@ -218,6 +218,7 @@ def main():
     if args.dali:
         trainer.fit(model, val_dataloaders=val_loader)
     else:
+        model.train_loaders = train_loaders
         trainer.fit(model, train_loaders, val_loader)
 
 
