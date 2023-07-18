@@ -125,6 +125,20 @@ def main():
                 num_workers=args.num_workers,
             )
             train_loaders.update({"online_eval": online_eval_loader})
+        if args.semi_aug:
+            semi_dataset, tasks = split_dataset(
+                online_eval_dataset,
+                tasks=tasks,
+                task_idx=args.task_idx,
+                num_tasks=args.num_tasks,
+                split_strategy=args.split_strategy,
+            )
+            semi_loader = prepare_dataloader(
+                semi_dataset,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+            )
+            train_loaders.update({"semi": semi_loader})
 
     # normal dataloader for when it is available
     if args.dataset == "custom" and (args.no_labels or args.val_dir is None):

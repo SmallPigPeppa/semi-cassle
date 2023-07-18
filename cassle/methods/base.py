@@ -424,13 +424,11 @@ class BaseModel(pl.LightningModule):
         # for _, X_task, Y_task in self.train_loaders[f"task{self.current_task_idx}"]:
         #     targets = Y_task.to(self.device)
         #     inputs = X_task[0].to(self.device)
-        for *_, X_online_eval, targets_online_eval in self.train_loaders["online_eval"]:
+        for *_, X_online_eval, targets_online_eval in self.train_loaders["semi"]:
             targets = targets_online_eval.to(self.device)
             inputs = X_online_eval.to(self.device)
             for class_id in self.new_classes:
                 # Skip if the class_id is not in targets
-                if not (targets == class_id).any():
-                    continue
                 indices = (targets == class_id)
                 with torch.no_grad():
                     features = self.encoder(inputs[indices])
@@ -500,7 +498,7 @@ class BaseModel(pl.LightningModule):
             outs_task["feats"].extend([self.encoder(x) for x in X_task[self.num_crops:]])
 
         if self.semi:
-            *_, X_online_eval, targets_online_eval = batch["online_eval"]
+            *_, X_online_eval, targets_online_eval = batch["semi"]
             if self.current_task_idx > 0:
                 old_classes = self.old_classes
                 radius = self.radius
