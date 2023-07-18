@@ -21,23 +21,23 @@ from torch.optim.lr_scheduler import (
 
 class LinearModel(pl.LightningModule):
     def __init__(
-        self,
-        backbone: nn.Module,
-        num_classes: int,
-        max_epochs: int,
-        batch_size: int,
-        optimizer: str,
-        lars: bool,
-        lr: float,
-        weight_decay: float,
-        exclude_bias_n_norm: bool,
-        extra_optimizer_args: dict,
-        scheduler: str,
-        split_strategy: str,
-        lr_decay_steps: Optional[Sequence[int]] = None,
-        tasks: list = None,
-        domain: str = None,
-        **kwargs,
+            self,
+            backbone: nn.Module,
+            num_classes: int,
+            max_epochs: int,
+            batch_size: int,
+            optimizer: str,
+            lars: bool,
+            lr: float,
+            weight_decay: float,
+            exclude_bias_n_norm: bool,
+            extra_optimizer_args: dict,
+            scheduler: str,
+            split_strategy: str,
+            lr_decay_steps: Optional[Sequence[int]] = None,
+            tasks: list = None,
+            domain: str = None,
+            **kwargs,
     ):
         """Implements linear evaluation.
 
@@ -89,6 +89,7 @@ class LinearModel(pl.LightningModule):
 
         # all the other parameters
         self.extra_args = kwargs
+        self.semi = None
 
         for param in self.backbone.parameters():
             param.requires_grad = False
@@ -215,7 +216,7 @@ class LinearModel(pl.LightningModule):
             return [optimizer], [scheduler]
 
     def shared_step(
-        self, batch: Tuple, batch_idx: int
+            self, batch: Tuple, batch_idx: int
     ) -> Tuple[int, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Performs operations that are shared between the training nd validation steps.
 
