@@ -1,4 +1,3 @@
-PRETRAINED_PATH=/mnt/mmtech01/usr/liuwenzhuo/code/test-code/semi-cassle/experiments/2023_07_18_01_50_03-simclr-cifar100-contrastive-semi-online/xypnbuu2/simclr-cifar100-contrastive-semi-online-task0-ep=499-xypnbuu2.ckpt
 python3 main_linear.py \
   --dataset cifar100 \
   --encoder resnet18 \
