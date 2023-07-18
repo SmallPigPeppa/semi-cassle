@@ -563,6 +563,8 @@ class BaseModel(pl.LightningModule):
                 "train_online_eval_acc1": outs_online_eval["online_eval_acc1"],
                 "train_online_eval_acc5": outs_online_eval["online_eval_acc5"],
             }
+            if self.semi:
+                metrics['train_semi_loss'] = outs_task['semi_loss']
 
             self.log_dict(metrics, on_epoch=True, sync_dist=True)
 
@@ -631,7 +633,7 @@ class BaseModel(pl.LightningModule):
 
             log = {"val_loss": val_loss, "val_acc1": val_acc1, "val_acc5": val_acc5}
             if self.semi:
-                log['semi_loss'] = outs['semi_loss']
+                log['val_semi_loss'] = outs['semi_loss']
 
             if not self.trainer.sanity_checking:
                 preds = torch.cat([o["logits"].max(-1)[1] for o in outs]).cpu().numpy()
