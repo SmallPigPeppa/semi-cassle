@@ -454,11 +454,15 @@ class BaseModel(pl.LightningModule):
                 cov = torch.matmul(features.t(), features) / features.shape[0]
                 radius = torch.trace(cov) / features.shape[1]
                 radii.append(radius)
-            import pdb;pdb.set_trace()
-            avg_radius = torch.sqrt(torch.mean(torch.stack(radii)))
+
+            t = torch.stack(radii)
+            mask = (t != 0) & torch.isfinite(t)
+            avg_radius = torch.sqrt(torch.mean(t[mask]))
 
             # Store average radius
             # self.radius = avg_radius
+            import pdb;
+            pdb.set_trace()
             self.radius = nn.Parameter(avg_radius, requires_grad=False)
         # self.radius = nn.Parameter(torch.tensor(2.0).to(self.device), requires_grad=False)
 
