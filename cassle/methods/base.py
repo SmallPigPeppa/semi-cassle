@@ -461,8 +461,8 @@ class BaseModel(pl.LightningModule):
 
             # Store average radius
             # self.radius = avg_radius
-            import pdb;
-            pdb.set_trace()
+            # import pdb;
+            # pdb.set_trace()
             self.radius = nn.Parameter(avg_radius, requires_grad=False)
         # self.radius = nn.Parameter(torch.tensor(2.0).to(self.device), requires_grad=False)
 
