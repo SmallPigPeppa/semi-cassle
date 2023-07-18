@@ -284,16 +284,27 @@ class BaseModel(pl.LightningModule):
             List[Dict[str, Any]]:
                 list of dicts containing learnable parameters and possible settings.
         """
-
-        return [
-            {"name": "encoder", "params": self.encoder.parameters()},
-            {
-                "name": "classifier",
-                "params": self.classifier.parameters(),
-                "lr": self.classifier_lr,
-                "weight_decay": 0,
-            },
-        ]
+        if self.semi:
+            return [
+                {"name": "encoder", "params": self.encoder.parameters()},
+                {"name": "semi_classifier", "params": self.semi_classifier.parameters()},
+                {
+                    "name": "classifier",
+                    "params": self.classifier.parameters(),
+                    "lr": self.classifier_lr,
+                    "weight_decay": 0,
+                },
+            ]
+        else:
+            return [
+                {"name": "encoder", "params": self.encoder.parameters()},
+                {
+                    "name": "classifier",
+                    "params": self.classifier.parameters(),
+                    "lr": self.classifier_lr,
+                    "weight_decay": 0,
+                },
+            ]
 
     def configure_optimizers(self) -> Tuple[List, List]:
         """Collects learnable parameters and configures the optimizer and learning rate scheduler.
@@ -619,6 +630,8 @@ class BaseModel(pl.LightningModule):
             val_acc5 = weighted_mean(outs, "val_acc5", "batch_size")
 
             log = {"val_loss": val_loss, "val_acc1": val_acc1, "val_acc5": val_acc5}
+            if self.semi:
+                log['semi_loss'] = outs['semi_loss']
 
             if not self.trainer.sanity_checking:
                 preds = torch.cat([o["logits"].max(-1)[1] for o in outs]).cpu().numpy()
