@@ -439,6 +439,8 @@ class BaseModel(pl.LightningModule):
             targets = targets_online_eval.to(self.device)
             inputs = X_online_eval.to(self.device)
             for class_id in self.new_classes:
+                if not (targets == class_id).any():
+                    continue
                 class_id = class_id.item()  # convert tensor to int
                 indices = (targets == class_id)
                 with torch.no_grad():
