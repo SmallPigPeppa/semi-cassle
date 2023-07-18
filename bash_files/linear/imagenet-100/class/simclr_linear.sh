@@ -1,24 +1,25 @@
-PRETRAINED_PATH=/mnt/mmtech01/usr/liuwenzhuo/code/test-code/semi-cassle/experiments/2023_07_18_01_50_03-simclr-cifar100-contrastive-semi-online/xypnbuu2/simclr-cifar100-contrastive-semi-online-task0-ep=499-xypnbuu2.ckpt
 python3 main_linear.py \
-  --dataset cifar100 \
-  --encoder resnet18 \
-  --data_dir $DATA_DIR \
-  --split_strategy class \
-  --num_tasks 5 \
-  --max_epochs 100 \
-  --gpus 0 \
-  --precision 16 \
-  --optimizer sgd \
-  --scheduler step \
-  --lr 1.0 \
-  --lr_decay_steps 60 80 \
-  --weight_decay 0 \
-  --batch_size 256 \
-  --num_workers 7 \
-  --dali \
-  --name simclr-cifar100-5T-linear-eval-task0 \
-  --pretrained_feature_extractor $PRETRAINED_PATH \
-  --project semi-cassle-linear \
-  --entity pigpeppa \
-  --wandb \
-  --save_checkpoint
+    --dataset imagenet100 \
+    --encoder resnet18 \
+    --data_dir $DATA_DIR \
+    --train_dir imagenet-100/train \
+    --val_dir imagenet-100/val \
+    --split_strategy class \
+    --num_tasks 5 \
+    --max_epochs 100 \
+    --gpus 0 \
+    --precision 16 \
+    --optimizer sgd \
+    --scheduler step \
+    --lr 1.0 \
+    --lr_decay_steps 60 80 \
+    --weight_decay 0 \
+    --batch_size 256 \
+    --num_workers 7 \
+    --dali \
+    --name simclr-imagenet100-5T-linear-eval \
+    --pretrained_feature_extractor $PRETRAINED_PATH \
+    --project ever-learn \
+    --entity unitn-mhug \
+    --wandb \
+    --save_checkpoint
