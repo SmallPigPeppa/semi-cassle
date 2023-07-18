@@ -632,8 +632,8 @@ class BaseModel(pl.LightningModule):
             val_acc5 = weighted_mean(outs, "val_acc5", "batch_size")
 
             log = {"val_loss": val_loss, "val_acc1": val_acc1, "val_acc5": val_acc5}
-            if self.semi:
-                log['val_semi_loss'] = outs['semi_loss']
+            # if self.semi:
+            #     log['val_semi_loss'] = outs['semi_loss']
 
             if not self.trainer.sanity_checking:
                 preds = torch.cat([o["logits"].max(-1)[1] for o in outs]).cpu().numpy()
