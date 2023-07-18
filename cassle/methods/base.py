@@ -408,7 +408,7 @@ class BaseModel(pl.LightningModule):
 
     def on_train_start(self):
         if self.semi:
-            print('self.radius:',self.radius)
+            print('self.radius:', self.radius)
             # print('self.trainer.max_epochs:',self.trainer.max_epochs)
 
     # def on_train_epoch_end(self):
@@ -421,9 +421,12 @@ class BaseModel(pl.LightningModule):
         class_means = {}
         class_features = {}
         self.eval()
-        for _, X_task, Y_task in self.train_loaders[f"task{self.current_task_idx}"]:
-            targets = Y_task.to(self.device)
-            inputs = X_task[0].to(self.device)
+        # for _, X_task, Y_task in self.train_loaders[f"task{self.current_task_idx}"]:
+        #     targets = Y_task.to(self.device)
+        #     inputs = X_task[0].to(self.device)
+        for *_, X_online_eval, targets_online_eval in self.train_loaders["online_eval"]:
+            targets = targets_online_eval.to(self.device)
+            inputs = X_online_eval.to(self.device)
             for class_id in self.new_classes:
                 indices = (targets == class_id)
                 with torch.no_grad():
@@ -489,6 +492,7 @@ class BaseModel(pl.LightningModule):
             outs_task["feats"].extend([self.encoder(x) for x in X_task[self.num_crops:]])
 
         if self.semi:
+            *_, X_online_eval, targets_online_eval = batch["online_eval"]
             if self.current_task_idx > 0:
                 old_classes = self.old_classes
                 radius = self.radius
@@ -498,8 +502,10 @@ class BaseModel(pl.LightningModule):
                 batchsize_old = batch_size // 2
 
                 # x_new, y_new = batch["semi_data"]
-                x_new = X_task[0][:batchsize_new]
-                y_new = Y_task[:batchsize_new]
+                # x_new = X_task[0][:batchsize_new]
+                # y_new = Y_task[:batchsize_new]
+                x_new = X_online_eval[:batchsize_new]
+                y_new = targets_online_eval[:batchsize_new]
                 z_new = self.encoder(x_new)
 
                 y_old = torch.tensor(random.choices(old_classes, k=batch_size))[:batchsize_old].to(self.device)
@@ -512,8 +518,10 @@ class BaseModel(pl.LightningModule):
                 y_all = torch.cat([y_new, y_old], dim=0)
                 z_all = torch.cat([z_new, z_old], dim=0)
             else:
-                x_new = X_task[0]
-                y_all = Y_task
+                # x_new = X_task[0]
+                # y_all = Y_task
+                x_new = X_online_eval
+                y_all = targets_online_eval
                 z_all = self.encoder(x_new)
 
             logits = self.semi_classifier(z_all)
