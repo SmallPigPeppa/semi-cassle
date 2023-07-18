@@ -14,7 +14,7 @@ python3 main_linear.py \
   --weight_decay 0 \
   --batch_size 256 \
   --num_workers 7 \
-  --name simclr-cifar100-5T-linear-eval-task0 \
+  --name simclr-cifar100-5T-linear-eval-t0 \
   --pretrained_feature_extractor $PRETRAINED_PATH \
   --project semi-cassle-linear \
   --entity pigpeppa \
