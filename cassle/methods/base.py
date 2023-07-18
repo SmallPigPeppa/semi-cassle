@@ -564,7 +564,7 @@ class BaseModel(pl.LightningModule):
                 "train_online_eval_acc5": outs_online_eval["online_eval_acc5"],
             }
             if self.semi:
-                metrics['train_semi_loss'] = outs_task['semi_loss']
+                metrics.update({'semi_loss':semi_loss})
 
             self.log_dict(metrics, on_epoch=True, sync_dist=True)
 
