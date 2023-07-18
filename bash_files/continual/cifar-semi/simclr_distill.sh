@@ -24,7 +24,7 @@ python3 main_continual.py \
     --saturation 0.8 \
     --hue 0.2 \
     --gaussian_prob 0.0 0.0 \
-    --name simclr-cifar100-contrastive-only-supervised \
+    --name simclr-cifar100-contrastive-semi \
     --project semi-cassle \
     --entity pigpeppa \
     --wandb \
