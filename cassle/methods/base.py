@@ -434,7 +434,7 @@ class BaseModel(pl.LightningModule):
                     features = self.encoder(inputs[indices])
                 # If class_id is encountered for the first time, initialize mean and features list
                 if class_id not in class_means:
-                    import pdb;pdb.set_trace()
+                    # import pdb;pdb.set_trace()
                     class_means[class_id] = features.mean(dim=0, keepdim=True)
                     class_features[class_id] = [features]
                 # If class_id has been encountered before, update mean and append features
@@ -464,8 +464,7 @@ class BaseModel(pl.LightningModule):
 
             # Store average radius
             # self.radius = avg_radius
-            # import pdb;
-            # pdb.set_trace()
+            import pdb;pdb.set_trace()
             self.radius = nn.Parameter(avg_radius, requires_grad=False)
         # self.radius = nn.Parameter(torch.tensor(2.0).to(self.device), requires_grad=False)
 
