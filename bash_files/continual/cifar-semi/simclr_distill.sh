@@ -4,7 +4,7 @@ python3 main_continual.py \
     --data_dir $DATA_DIR \
     --split_strategy class \
     --task_idx 0 \
-    --max_epochs 500 \
+    --max_epochs 1 \
     --num_tasks 5 \
     --gpus 0 \
     --precision 16 \
@@ -24,7 +24,7 @@ python3 main_continual.py \
     --saturation 0.8 \
     --hue 0.2 \
     --gaussian_prob 0.0 0.0 \
-    --name simclr-cifar100-contrastive-semi \
+    --name simclr-cifar100-contrastive-semi-online \
     --project semi-cassle \
     --entity pigpeppa \
     --wandb \
